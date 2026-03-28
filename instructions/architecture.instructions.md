@@ -115,14 +115,4 @@ src/app/
 | DB table names | snake_case plural | `products`, `order_items` |
 | DB column names | snake_case | `created_at`, `category_id` |
 
-## Cache
-use in memory caching (e.g., `IMemoryCache`) for frequently accessed data that rarely changes (e.g., product categories). 
-## Data Seed
-data only into file .sql seed scripts 
-Mogration for the structure
-## Logging
-  Serilog into database no files, create .sqlscript for the table  if not exists. use separate db connection string for log
-
-
-
-
+<!-- Cross-cutting concerns (logging, caching, data seeding) are defined in cross-cutting.instructions.md -->
