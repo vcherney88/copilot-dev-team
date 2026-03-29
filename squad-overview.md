@@ -4,18 +4,18 @@
 
 ## Team Overview
 
-Una squadra di agenti AI specializzati, ognuno con un ruolo chiaro e non sovrapposto. Lavorano insieme sotto la coordinazione di Jarvis per trasformare le tue richieste in codice di qualità.
+Una squadra di agenti AI specializzati, ognuno con un ruolo chiaro e non sovrapposto. Lavorano insieme sotto la coordinazione di Pepper Potts per trasformare le tue richieste in codice di qualità.
 
 ```
                         ┌──────────────┐
-                        │   J.A.R.V.I.S.  │
-                        │  Orchestrator │
+                        │ Pepper Potts │
+                        │ Orchestrator │
                         └──────┬───────┘
                                │
               ┌────────────────┼────────────────┐
               │                │                │
         ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-        │   Vision   │   │Tony Stark │   │  Rogers   │
+        │   Vision   │   │Nick Fury │   │  Rogers   │
         │  Analyst   │   │  Planner  │   │ Reviewer  │
         └────────────┘   └─────┬─────┘   └───────────┘
                                │
@@ -31,10 +31,10 @@ Una squadra di agenti AI specializzati, ognuno con un ruolo chiaro e non sovrapp
 
 ## Gli Agenti
 
-### 🤖 J.A.R.V.I.S. — Orchestrator
-*"Just A Rather Very Intelligent System"*
+### 💼 Pepper Potts — Orchestrator
+*"I do anything and everything Mr. Stark requires — including occasionally taking out the trash."*
 
-Il cervello operativo della squadra. Non scrive una riga di codice, ma coordina tutto il flusso: dall'analisi dei requisiti alla review finale. Decide chi lavora su cosa, quando le cose possono andare in parallelo, e quando serve aspettare.
+La CEO della squadra. Non scrive una riga di codice, ma coordina tutto il flusso: dall'analisi dei requisiti alla review finale. Decide chi lavora su cosa, quando le cose possono andare in parallelo, e quando serve aspettare. Tiene traccia del progetto e delega con precisione chirurgica.
 
 **Responsabilità:**
 - Riceve le richieste dell'utente e le smista
@@ -65,7 +65,7 @@ L'analista funzionale della squadra. Esamina ogni richiesta per verificare che s
 
 ---
 
-### 🧠 Tony Stark — Planner
+### 🧠 Nick Fury — Planner
 *"I am Iron Man." (Ma qui pianifica soltanto.)*
 
 Il genio strategico. Prende i requisiti validati e li trasforma in un piano tecnico dettagliato, segmentato per layer e con sub-task gestibili. Mantiene il **Master Plan** (`master-plan.md`): il registro storico di tutte le change request, le decisioni prese e lo stato di avanzamento.
@@ -90,7 +90,7 @@ Il genio strategico. Prende i requisiti validati e li trasforma in un piano tecn
 Lo scienziato metodico della squadra. Scrive codice pulito, testato e manutenibile seguendo rigorosamente TDD e i principi clean code. Non assume mai di sapere — legge la documentazione, segue i pattern esistenti, rispetta l'architettura definita.
 
 **Responsabilità:**
-- Implementa le feature seguendo il piano di Tony Stark
+- Implementa le feature seguendo il piano di Nick Fury
 - TDD: Red → Green → Refactor per ogni cambiamento
 - Rispetta layer boundaries e naming conventions
 - Scrive codice auto-documentante (no commenti superflui)
@@ -141,12 +141,125 @@ Captain America della qualità. Nessun codice va in produzione senza il suo ok. 
 
 ---
 
+## Architecture Diagrams
+
+### Squad Structure
+
+```plantuml
+@startuml Squad Architecture
+
+!theme cerulean
+skinparam linetype ortho
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+
+package "The Squad" {
+  
+  component "Pepper Potts\nOrchestrator" as Pepper
+  
+  component "Vision\nAnalyst" as Vision
+  component "Nick Fury\nPlanner" as Tony
+  
+  package "Builders" {
+    component "Banner\nCoder" as Banner
+    component "Wanda\nDesigner" as Wanda
+  }
+  
+  component "Rogers\nReviewer" as Rogers
+}
+
+actor User
+
+User -down-> Pepper : Change Request
+
+Pepper -down-> Vision : Validate\n(if needed)
+Vision -up-> User : Business\nApproval?
+User -down-> Pepper : Approved
+
+Pepper -down-> Tony : Plan
+Tony -right-> Tony : Update\nmaster-plan.md
+
+Pepper -down-> Banner : Code\n(parallel)
+Pepper -down-> Wanda : Design\n(parallel)
+
+Banner -down-> Rogers : Review
+Wanda -down-> Rogers : Review
+
+Rogers -up-> Pepper : ✅ Done
+Rogers -right-> Banner : ❌ Fix
+Rogers -right-> Wanda : ❌ Fix
+
+Pepper -up-> User : Delivered
+
+@enduml
+```
+
+### Workflow Sequence
+
+```plantuml
+@startuml Workflow Sequence
+
+!theme cerulean
+skinparam linetype ortho
+skinparam backgroundColor transparent
+skinparam sequenceMessageAlign center
+
+actor User
+participant "Pepper\n(Orchestrator)" as Pepper
+participant "Vision\n(Analyst)" as Vision
+participant "Nick Fury\n(Planner)" as Tony
+participant "Banner\n(Coder)" as Banner
+participant "Wanda\n(Designer)" as Wanda
+participant "Rogers\n(Reviewer)" as Rogers
+
+User -> Pepper : Change Request
+
+alt Breaking/Ambiguous Change
+    Pepper -> Vision : Analyze requirements
+    Vision -> Vision : Detect conflicts,\ncheck existing flows
+    Vision -> Pepper : ⚠️ BUSINESS APPROVAL REQUIRED\n+ proposed solutions
+    Pepper -> User : Present options
+    User -> Pepper : Choose solution
+end
+
+Pepper -> Tony : Plan implementation
+Tony -> Tony : Research codebase
+Tony -> Tony : Segment into sub-tasks
+Tony -> Tony : Update master-plan.md
+Tony -> Pepper : Plan ready
+
+par Parallel Implementation
+    Pepper -> Banner : Code sub-tasks 1-3
+    Banner -> Banner : TDD:\nRed-Green-Refactor
+    Pepper -> Wanda : Design sub-tasks 4-5
+    Wanda -> Wanda : UI/UX,\ntemplates, styles
+end
+
+Pepper -> Rogers : Review implementation
+
+alt Review Passed
+    Rogers -> Pepper : ✅ Approved
+    Pepper -> User : Done
+else Issues Found  
+    Rogers -> Banner : ❌ Fix code issues
+    Rogers -> Wanda : ❌ Fix design issues
+    Banner -> Rogers : Fixed
+    Wanda -> Rogers : Fixed
+    Rogers -> Pepper : ✅ Approved
+    Pepper -> User : Done
+end
+
+@enduml
+```
+
+---
+
 ## Workflow
 
 ```
 1. Richiesta utente
 2. Vision analizza (se necessario) → può richiedere approvazione business
-3. Tony Stark pianifica → aggiorna master-plan.md
+3. Nick Fury pianifica → aggiorna master-plan.md
 4. Banner + Wanda implementano (in parallelo dove possibile)
 5. Rogers fa review → approva o richiede correzioni
 6. Done ✅
@@ -157,9 +270,9 @@ Captain America della qualità. Nessun codice va in produzione senza il suo ok. 
 ```
 Copilot/
   agents/
-    orchestrator.agent.md     ← Jarvis
+    orchestrator.agent.md     ← Pepper Potts
     analyst.agent.md          ← Vision
-    planner.agent.md          ← Tony Stark
+    planner.agent.md          ← Nick Fury
     coder.agent.md            ← Banner
     designer.agent.md         ← Wanda
     reviewer.agent.md         ← Rogers

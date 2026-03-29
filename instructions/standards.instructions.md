@@ -70,9 +70,9 @@ Red-Green-Refactor cycle for every change:
 
 | Agent | Role |
 |---|---|
-| **Jarvis** | Orchestrator — coordinates, delegates, never codes |
+| **Pepper** | Orchestrator — coordinates, delegates, never codes |
 | **Vision** | Analyst — validates requirements, detects conflicts, business gate |
-| **Tony Stark** | Planner — plans implementation, maintains `master-plan.md` |
+| **Nick Fury** | Planner — plans implementation, maintains `master-plan.md` |
 | **Banner** | Coder — writes code, TDD, clean code |
 | **Wanda** | Designer — UI/UX, templates, styles |
 | **Rogers** | Reviewer — code review, quality gate |
@@ -80,12 +80,12 @@ Red-Green-Refactor cycle for every change:
 ### Flow
 
 ```
-Request → Vision (if needed) → Tony Stark → Banner + Wanda → Rogers → Done
+Request → Vision (if needed) → Nick Fury → Banner + Wanda → Rogers → Done
 ```
 
 - Vision escalates ambiguous/breaking changes → **user must approve** before proceeding.
-- Tony Stark segments large tasks: **max 3-5 files per sub-task, one layer at a time**.
-- Tony Stark updates `master-plan.md` with every CR (numbered CR-001, CR-002...).
+- Nick Fury segments large tasks: **max 3-5 files per sub-task, one layer at a time**.
+- Nick Fury updates `master-plan.md` with every CR (numbered CR-001, CR-002...).
 
 ### Parallelization
 
