@@ -164,22 +164,18 @@ Copilot/
     designer.agent.md         ← Wanda
     reviewer.agent.md         ← Rogers
   instructions/
-    coding-standards.instructions.md   ← Generico: principi clean code, TDD
-    workflow.instructions.md           ← Generico: come collaborano gli agenti
-    architecture.instructions.md       ← Progetto: stack, layer, folder structure
-    backend.instructions.md            ← Progetto: convenzioni backend
-    frontend.instructions.md           ← Progetto: convenzioni frontend
-    cross-cutting.instructions.md      ← Progetto: logging, caching, auth, errors
+    standards.instructions.md          ← Generico: clean code, TDD, naming, workflow agenti
+    architecture.instructions.md       ← Progetto: stack, layer, folder, naming conventions, cross-cutting
+    backend.instructions.md            ← Progetto: pattern/template backend (solo codice di riferimento)
+    frontend.instructions.md           ← Progetto: pattern/template frontend (solo codice di riferimento)
   squad-overview.md                    ← Questo file
 ```
 
 ### Cosa è generico (copiabile as-is tra progetti)
 - Tutti i file in `agents/`
-- `coding-standards.instructions.md`
-- `workflow.instructions.md`
+- `standards.instructions.md`
 
 ### Cosa è specifico per progetto (da personalizzare)
-- `architecture.instructions.md` — stack, layer, folder structure
-- `backend.instructions.md` — .NET, Django, Spring, Node.js...
-- `frontend.instructions.md` — Angular, Razor Pages, Flutter, React...
-- `cross-cutting.instructions.md` — logging, caching, auth per quel progetto
+- `architecture.instructions.md` — stack, layer, folder structure, naming, logging, caching, auth
+- `backend.instructions.md` — .NET, Django, Spring, Node.js... (solo template di codice)
+- `frontend.instructions.md` — Angular, Razor Pages, Flutter, React... (solo template di codice)

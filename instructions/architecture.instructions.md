@@ -1,118 +1,105 @@
+```instructions
 ---
 applyTo: "**"
 ---
 
 # Project Architecture
 
+> **Customize this file per project.** Stack, layers, naming, cross-cutting concerns.
+
 ## Stack
+
 - **Backend**: .NET Core 10
 - **Database**: PostgreSQL
 - **Frontend**: Angular
-- **ORM**: Entity Framework Core with Npgsql provider
+- **ORM**: Entity Framework Core (Npgsql)
 
-## Multi-Layer Architecture (Backend)
-
-```
-API Layer          → Controllers, DTOs, Validation, Auth, Swagger
-Business Layer     → Services (interfaces + implementations), domain logic
-Data Layer         → Entities, EF Core DbContext, Configurations, Repositories, Migrations
-```
-
-### Layer Responsibilities
-- **Controllers** are thin: validate input → call service → return HTTP response. No business logic.
-- **Services** contain ALL business rules and orchestration logic.
-- **Repositories** contain ONLY data access. No business rules, no HTTP concerns.
-- **Entities** are never exposed to the API layer. Always map to DTOs.
-
-## Dependency Flow
+## Layer Structure
 
 ```
-Angular Component
-  → Angular Service (HttpClient)
-    → .NET Controller (API Layer)
-      → .NET Service (Business Layer)
-        → Repository (Data Layer)
-          → EF Core DbContext
-            → PostgreSQL
+API Layer       → Controllers, DTOs, Validation, Swagger
+Business Layer  → Services (interface + implementation), domain logic
+Data Layer      → Entities, DbContext, Configurations, Repositories, Migrations
 ```
 
-**Frontend always depends on backend API** — never implement Angular features before the API contract is defined.
-
-## Repository Pattern
-
-### Generic Repository
-A single `IRepository<T>` / `Repository<T>` provides standard CRUD for all entities:
-- `GetByIdAsync(id)`
-- `GetAllAsync()`
-- `AddAsync(entity)`
-- `UpdateAsync(entity)`
-- `DeleteAsync(id)`
-
-### Specific Repositories
-Create `IProductRepository : IRepository<Product>` ONLY when you need:
-- Custom queries not covered by CRUD (e.g., `GetByCategoryAsync`, `SearchAsync`)
-- Complex LINQ with joins, projections, or aggregations
-- Raw SQL or stored procedure calls
-
-**For simple CRUD entities: use the generic repository directly. Do NOT create an empty specific repository.**
-
-### Unit of Work
-If `IUnitOfWork` exists in the codebase, use it for transactional operations spanning multiple repositories.
+**Dependency flow:** Frontend → API → Business → Data → DB. Never skip layers, never reference upward.
 
 ## Folder Structure
 
 ### Backend
 ```
 src/
-  Api/
-    Controllers/
-    DTOs/
-    Validators/
-  Business/
-    Services/
-    Exceptions/
-  Data/
-    Entities/
-    Configurations/
-    Repositories/
-    Migrations/
-    AppDbContext.cs
+  Api/Controllers/, DTOs/, Validators/
+  Business/Services/, Exceptions/
+  Data/Entities/, Configurations/, Repositories/, Migrations/, AppDbContext.cs
   Program.cs
 ```
 
 ### Frontend (Angular)
 ```
 src/app/
-  core/              ← singleton services, interceptors, guards
-  shared/            ← reusable components, pipes, directives
-  features/
-    product/
-      components/
-      services/
-      models/
-      product-routing.module.ts
-      product.module.ts
+  core/services/, interceptors/, guards/
+  shared/components/, pipes/, directives/
+  features/{feature}/components/, services/, models/, {feature}.module.ts
 ```
 
+## Repository Pattern
+
+- **Generic** `IRepository<T>` / `Repository<T>` for standard CRUD (`GetByIdAsync`, `GetAllAsync`, `AddAsync`, `UpdateAsync`, `DeleteAsync`).
+- **Specific** `IXxxRepository : IRepository<Xxx>` ONLY when custom queries are needed (joins, aggregations, raw SQL).
+- Don't create empty specific repositories for simple CRUD.
+- Use `IUnitOfWork` (if present) for multi-repository transactions.
+
 ## API Conventions
-- Resource naming: plural nouns → `/api/products`, `/api/orders`
-- HTTP methods: GET (read), POST (create), PUT (full update), PATCH (partial), DELETE
-- Status codes: 200 OK, 201 Created, 204 NoContent, 400 BadRequest, 404 NotFound, 409 Conflict
+
+- Routes: plural nouns `/api/products`, `/api/orders`
+- Methods: GET (read), POST (create), PUT (full update), PATCH (partial), DELETE
+- Status codes: 200, 201, 204, 400, 404, 409
 - Pagination: `?page=1&pageSize=20`
-- Always return DTOs, never EF Core entities
+- Always return DTOs, never entities
 
 ## Naming Conventions
 
-| Concern | Convention | Example |
+| Scope | Convention | Example |
 |---|---|---|
 | C# public members | PascalCase | `GetProductById` |
-| C# private fields | `_camelCase` | `_productService` |
-| C# interfaces | `I` prefix | `IProductService` |
-| C# async methods | `Async` suffix | `GetByIdAsync` |
+| C# private fields | _camelCase | `_productService` |
+| C# interfaces | I prefix | `IProductService` |
+| C# async methods | Async suffix | `GetByIdAsync` |
 | TS variables/methods | camelCase | `getProducts()` |
 | TS classes/interfaces | PascalCase | `ProductService` |
-| Angular file names | kebab-case | `product-list.component.ts` |
-| DB table names | snake_case plural | `products`, `order_items` |
-| DB column names | snake_case | `created_at`, `category_id` |
+| Angular files | kebab-case | `product-list.component.ts` |
+| DB tables | snake_case plural | `products`, `order_items` |
+| DB columns | snake_case | `created_at`, `category_id` |
+| DTOs | Suffix by use | `ProductDto`, `CreateProductRequest`, `UpdateProductRequest` |
+| Test methods (C#) | Method_Scenario_Result | `GetByIdAsync_NotFound_Throws` |
+| Test methods (TS) | should...when... | `should return products when API succeeds` |
 
-<!-- Cross-cutting concerns (logging, caching, data seeding) are defined in cross-cutting.instructions.md -->
+## Cross-Cutting Concerns
+
+### Logging
+- **Serilog** → PostgreSQL (no file logging)
+- Separate connection string for log DB
+- Create `.sql` script for log table (`IF NOT EXISTS`)
+- Structured: `_logger.LogInformation("Processing {OrderId}", orderId)`
+
+### Caching
+- `IMemoryCache` for semi-static data (categories, lookups). TTL 5-30 min.
+- Invalidate on writes. Never cache user-specific or frequently changing data.
+
+### Error Handling
+- Global exception middleware maps exceptions → HTTP status codes
+- Typed exceptions: `NotFoundException` → 404, `BusinessException` → 400/409
+- Never expose stack traces in production. Always log full exception server-side.
+
+### Authentication
+- `[Authorize]` at controller/action level. `[AllowAnonymous]` for public.
+- Role-based: `[Authorize(Roles = "Admin")]`
+- Strategy per project (JWT, Cookie, OAuth).
+
+### Data Seeding
+- Schema: ORM migrations only.
+- Data: `.sql` seed scripts (idempotent, safe to re-run).
+- Never mix migrations with data seeding.
+
+```

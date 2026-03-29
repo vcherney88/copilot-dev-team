@@ -1,83 +1,54 @@
+```instructions
 ---
 applyTo: "**/*.cs"
 ---
 
-# Backend Conventions — .NET Core 10
+# Backend Patterns — .NET
 
-## API Layer
+> Reference templates. Follow this shape for consistency. Don't duplicate rules from `architecture.instructions.md`.
 
-### Controllers
+## Controller (thin — validate, call service, return response)
+
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
-public class ProductsController : ControllerBase
+public class ProductsController(IProductService productService) : ControllerBase
 {
-    private readonly IProductService _productService;
-
-    public ProductsController(IProductService productService)
-    {
-        _productService = productService;
-    }
-
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id) { ... }
+    public async Task<IActionResult> GetById(int id)
+        => Ok(await productService.GetByIdAsync(id));
 
     [HttpPost]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Create([FromBody] CreateProductRequest request) { ... }
+    public async Task<IActionResult> Create([FromBody] CreateProductRequest request)
+    {
+        var result = await productService.CreateAsync(request);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
 }
 ```
-- Inject service via constructor
-- Use `[ProducesResponseType]` on every endpoint for Swagger
-- Return `IActionResult` or `ActionResult<T>`
-- Controllers do NOT contain business logic
+- `[ProducesResponseType]` on every endpoint (Swagger).
+- XML comments on public methods: `/// <summary>`.
+- Primary constructor for DI injection.
 
-### DTOs
-- Separate classes per use case: `ProductDto` (response), `CreateProductRequest`, `UpdateProductRequest`
-- Never expose EF Core entities in responses
-- Request DTOs carry validation attributes (DataAnnotations) or are validated via FluentValidation
+## Validation (on request DTOs)
 
-### Validation
 ```csharp
-// DataAnnotations on request DTO
 public class CreateProductRequest
 {
-    [Required]
-    [MaxLength(200)]
+    [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
     [Range(0.01, double.MaxValue)]
     public decimal Price { get; set; }
 }
 ```
-```csharp
-// Or FluentValidation (if used in project)
-public class CreateProductRequestValidator : AbstractValidator<CreateProductRequest>
-{
-    public CreateProductRequestValidator()
-    {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Price).GreaterThan(0);
-    }
-}
-```
+Or FluentValidation if adopted: `AbstractValidator<T>` with `RuleFor(...)`.
 
-### Swagger
-- Enable XML comments in .csproj: `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
-- Add `/// <summary>` on public controller methods
-- Use `[ProducesResponseType]` on every endpoint
+## Service (all business logic here)
 
-### Authentication / Authorization
-- Use `[Authorize]` at controller or action level
-- Use `[AllowAnonymous]` to override on public endpoints
-- Role-based: `[Authorize(Roles = "Admin")]`
-
-## Business Layer
-
-### Services
 ```csharp
 public interface IProductService
 {
@@ -88,26 +59,15 @@ public interface IProductService
     Task DeleteAsync(int id);
 }
 
-public class ProductService : IProductService
+public class ProductService(IRepository<Product> repository, ILogger<ProductService> logger) : IProductService
 {
-    private readonly IRepository<Product> _repository; // generic repo for CRUD
-    private readonly ILogger<ProductService> _logger;
-
-    public ProductService(IRepository<Product> repository, ILogger<ProductService> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
+    // business rules, mapping, logging at boundaries
+    // throw NotFoundException, BusinessException for error cases
 }
 ```
-- All business rules live in the service
-- Throw typed domain exceptions (e.g., `NotFoundException`, `BusinessException`)
-- Let global exception middleware map exceptions to HTTP status codes
-- Log at service boundaries with structured context (`_logger.LogInformation("Getting product {ProductId}", id)`)
 
-## Data Layer
+## Entity (plain C# class, no data annotations)
 
-### Entities
 ```csharp
 public class Product
 {
@@ -120,10 +80,9 @@ public class Product
     public DateTime UpdatedAt { get; set; }
 }
 ```
-- Plain C# classes — NO data annotations for DB config
-- Navigation properties for relationships
 
-### Entity Configuration (Fluent API)
+## Entity Configuration (Fluent API only)
+
 ```csharp
 public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
@@ -139,90 +98,60 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
     }
 }
 ```
-- All DB configuration via Fluent API in `IEntityTypeConfiguration<T>` classes
-- Table names: snake_case plural
-- Column names: snake_case
-- Always define indexes on foreign keys
+- All DB config via Fluent API in `IEntityTypeConfiguration<T>`. No annotations on entities.
+- Table/column names: snake_case (see naming conventions in `architecture.instructions.md`).
+- Always index foreign keys.
 
-### DbContext
+## DbContext
+
 ```csharp
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<Product> Products => Set<Product>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-    }
+        => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 }
 ```
 
-### Generic Repository
+## DI Registration (Program.cs)
+
 ```csharp
-public interface IRepository<T> where T : class
-{
-    Task<T?> GetByIdAsync(int id);
-    Task<IEnumerable<T>> GetAllAsync();
-    Task AddAsync(T entity);
-    Task UpdateAsync(T entity);
-    Task DeleteAsync(int id);
-}
-```
-
-### Specific Repository (only when custom queries needed)
-```csharp
-public interface IProductRepository : IRepository<Product>
-{
-    Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId);
-}
-```
-
-### Migrations
-```bash
-dotnet ef migrations add AddProductTable
-dotnet ef database update
-```
-- Never modify the database manually
-- One migration per logical change
-
-## Dependency Injection (Program.cs)
-```csharp
-// DbContext
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Generic repository (registered once, used by all entities)
+builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-
-// Specific repositories (only if they exist)
+// Specific repos only if they exist:
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
-
-// Services
+// Services:
 builder.Services.AddScoped<IProductService, ProductService>();
 ```
 
-## Testing
+## Migrations
 
-### Unit Tests (xUnit + Moq)
+```bash
+dotnet ef migrations add MigrationName
+dotnet ef database update
+```
+One migration per logical change. Never modify the database manually.
+
+## Unit Test (xUnit + Moq)
+
 ```csharp
 public class ProductServiceTests
 {
     [Fact]
-    public async Task GetByIdAsync_ExistingProduct_ReturnsProductDto()
+    public async Task GetByIdAsync_ExistingProduct_ReturnsDto()
     {
-        var mockRepo = new Mock<IRepository<Product>>();
-        mockRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Product { Id = 1, Name = "Test" });
-        var service = new ProductService(mockRepo.Object, Mock.Of<ILogger<ProductService>>());
+        var repo = new Mock<IRepository<Product>>();
+        repo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Product { Id = 1, Name = "Test" });
+        var sut = new ProductService(repo.Object, Mock.Of<ILogger<ProductService>>());
 
-        var result = await service.GetByIdAsync(1);
+        var result = await sut.GetByIdAsync(1);
 
-        Assert.NotNull(result);
         Assert.Equal("Test", result.Name);
     }
 }
 ```
-- Test naming: `MethodName_Scenario_ExpectedResult`
-- Mock repository interfaces, never DbContext directly
-- Use `WebApplicationFactory<Program>` for integration tests
+- Mock interfaces, not DbContext.
+- `WebApplicationFactory<Program>` for integration tests.
+
+```
