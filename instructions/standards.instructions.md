@@ -72,6 +72,7 @@ Red-Green-Refactor cycle for every change:
 |---|---|
 | **Pepper** | Orchestrator — coordinates, delegates, never codes |
 | **Vision** | Analyst — validates requirements, detects conflicts, business gate |
+| **Tony Stark** | Architect — evaluates complex tech decisions, proposes architecture, evolves instructions |
 | **Nick Fury** | Planner — plans implementation, maintains `master-plan.md` |
 | **Banner** | Coder — writes code, TDD, clean code |
 | **Wanda** | Designer — UI/UX, templates, styles |
@@ -80,10 +81,11 @@ Red-Green-Refactor cycle for every change:
 ### Flow
 
 ```
-Request → Vision (if needed) → Nick Fury → Banner + Wanda → Rogers → Done
+Request → Vision (if needed) → [Tony Stark if complex] → Nick Fury → Banner + Wanda → Rogers → Done
 ```
 
 - Vision escalates ambiguous/breaking changes → **user must approve** before proceeding.
+- Tony Stark steps in only for architecture decisions, tech choices, or instruction evolution.
 - Nick Fury segments large tasks: **max 3-5 files per sub-task, one layer at a time**.
 - Nick Fury updates `master-plan.md` with every CR (numbered CR-001, CR-002...).
 

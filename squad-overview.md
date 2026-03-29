@@ -10,21 +10,29 @@ Una squadra di agenti AI specializzati, ognuno con un ruolo chiaro e non sovrapp
                         ┌──────────────┐
                         │ Pepper Potts │
                         │ Orchestrator │
-                        └──────┬───────┘
-                               │
-              ┌────────────────┼────────────────┐
+                        └──┬───┬───┬───┘
+                           │   │   │
+              ┌────────────┘   │   └────────────┐
               │                │                │
-        ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-        │   Vision   │   │Nick Fury │   │  Rogers   │
-        │  Analyst   │   │  Planner  │   │ Reviewer  │
-        └────────────┘   └─────┬─────┘   └───────────┘
-                               │
-                    ┌──────────┼──────────┐
-                    │                     │
-              ┌─────▼─────┐         ┌─────▼─────┐
-              │  Banner   │         │   Wanda   │
-              │   Coder   │         │ Designer  │
-              └───────────┘         └───────────┘
+          ┌───▼────┐      ┌────▼────┐      ┌────▼─────┐
+          │ Vision │      │  Tony   │      │   Nick   │
+          │Analyst │      │  Stark  │      │   Fury   │
+          └────────┘      │Architect│      │  Planner │
+                          └─────────┘      └─────┬────┘
+                                                 │
+                                        ┌────────┴────────┐
+                                        │                 │
+                                   ┌────▼────┐       ┌────▼────┐
+                                   │ Banner  │       │  Wanda  │
+                                   │  Coder  │       │Designer │
+                                   └────┬────┘       └────┬────┘
+                                        │                 │
+                                        └────────┬────────┘
+                                                 │
+                                            ┌────▼─────┐
+                                            │  Rogers  │
+                                            │ Reviewer │
+                                            └──────────┘
 ```
 
 ---
@@ -65,10 +73,31 @@ L'analista funzionale della squadra. Esamina ogni richiesta per verificare che s
 
 ---
 
-### 🧠 Nick Fury — Planner
-*"I am Iron Man." (Ma qui pianifica soltanto.)*
+### 🧠 Tony Stark — Senior Architect
+*"Sometimes you gotta run before you can walk."*
 
-Il genio strategico. Prende i requisiti validati e li trasforma in un piano tecnico dettagliato, segmentato per layer e con sub-task gestibili. Mantiene il **Master Plan** (`master-plan.md`): il registro storico di tutte le change request, le decisioni prese e lo stato di avanzamento.
+Il genio tecnico della squadra. Non interviene su tutto — solo quando la situazione richiede una decisione architetturale profonda: nuova integrazione, scelta di librerie, pattern complessi, o quando le regole del progetto (instruction files) devono evolvere. È l'unico autorizzato a proporre modifiche alle instructions.
+
+**Responsabilità:**
+- Valuta trade-off tecnici tra approcci alternativi
+- Propone architettura per integrazioni complesse (API esterne, message broker, auth)
+- Raccomanda librerie e pattern con analisi pro/contro
+- Evolve le instruction files quando il progetto cambia
+- Verifica che le convenzioni esistenti siano ancora adeguate
+
+**Quando interviene:**
+- Nuova integrazione con sistema esterno
+- Scelta architetturale significativa (CQRS, caching strategy, etc.)
+- Performance o scalabilità concerns
+- Refactoring strutturale cross-layer
+- Le instructions devono essere aggiornate
+
+---
+
+### 📋 Nick Fury — Planner
+*"I still believe in heroes."*
+
+Il direttore operativo. Prende i requisiti validati (e le decisioni architetturali di Tony Stark, se presenti) e li trasforma in un piano tecnico dettagliato, segmentato per layer e con sub-task gestibili. Mantiene il **Master Plan** (`master-plan.md`): il registro storico di tutte le change request, le decisioni prese e lo stato di avanzamento.
 
 **Responsabilità:**
 - Ricerca il codebase per capire pattern esistenti
@@ -158,7 +187,8 @@ package "The Squad" {
   component "Pepper Potts\nOrchestrator" as Pepper
   
   component "Vision\nAnalyst" as Vision
-  component "Nick Fury\nPlanner" as Tony
+  component "Tony Stark\nArchitect" as Stark
+  component "Nick Fury\nPlanner" as Fury
   
   package "Builders" {
     component "Banner\nCoder" as Banner
@@ -176,8 +206,11 @@ Pepper -down-> Vision : Validate\n(if needed)
 Vision -up-> User : Business\nApproval?
 User -down-> Pepper : Approved
 
-Pepper -down-> Tony : Plan
-Tony -right-> Tony : Update\nmaster-plan.md
+Pepper -down-> Stark : Evaluate\n(if complex)
+Stark -down-> Pepper : Recommendation
+
+Pepper -down-> Fury : Plan
+Fury -right-> Fury : Update\nmaster-plan.md
 
 Pepper -down-> Banner : Code\n(parallel)
 Pepper -down-> Wanda : Design\n(parallel)
@@ -207,7 +240,8 @@ skinparam sequenceMessageAlign center
 actor User
 participant "Pepper\n(Orchestrator)" as Pepper
 participant "Vision\n(Analyst)" as Vision
-participant "Nick Fury\n(Planner)" as Tony
+participant "Tony Stark\n(Architect)" as Stark
+participant "Nick Fury\n(Planner)" as Fury
 participant "Banner\n(Coder)" as Banner
 participant "Wanda\n(Designer)" as Wanda
 participant "Rogers\n(Reviewer)" as Rogers
@@ -222,11 +256,19 @@ alt Breaking/Ambiguous Change
     User -> Pepper : Choose solution
 end
 
-Pepper -> Tony : Plan implementation
-Tony -> Tony : Research codebase
-Tony -> Tony : Segment into sub-tasks
-Tony -> Tony : Update master-plan.md
-Tony -> Pepper : Plan ready
+opt Complex Architecture Decision
+    Pepper -> Stark : Evaluate options
+    Stark -> Stark : Research alternatives,\nverify documentation
+    Stark -> Pepper : Recommendation +\ntrade-offs analysis
+    Pepper -> User : Present options (if needed)
+    User -> Pepper : Approve approach
+end
+
+Pepper -> Fury : Plan implementation
+Fury -> Fury : Research codebase
+Fury -> Fury : Segment into sub-tasks
+Fury -> Fury : Update master-plan.md
+Fury -> Pepper : Plan ready
 
 par Parallel Implementation
     Pepper -> Banner : Code sub-tasks 1-3
@@ -259,10 +301,11 @@ end
 ```
 1. Richiesta utente
 2. Vision analizza (se necessario) → può richiedere approvazione business
-3. Nick Fury pianifica → aggiorna master-plan.md
-4. Banner + Wanda implementano (in parallelo dove possibile)
-5. Rogers fa review → approva o richiede correzioni
-6. Done ✅
+3. Tony Stark valuta architettura (se complesso) → può proporre modifiche alle instructions
+4. Nick Fury pianifica → aggiorna master-plan.md
+5. Banner + Wanda implementano (in parallelo dove possibile)
+6. Rogers fa review → approva o richiede correzioni
+7. Done ✅
 ```
 
 ## File Structure
@@ -272,6 +315,7 @@ Copilot/
   agents/
     orchestrator.agent.md     ← Pepper Potts
     analyst.agent.md          ← Vision
+    architect.agent.md        ← Tony Stark
     planner.agent.md          ← Nick Fury
     coder.agent.md            ← Banner
     designer.agent.md         ← Wanda

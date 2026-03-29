@@ -14,6 +14,7 @@ Before starting, read ALL `instructions/*.instructions.md` files to understand t
 These are the only agents you can call. Each has a specific role:
 
 - **Vision** (Analyst) — Validates requirements, identifies gaps, ambiguities, and conflicts with existing flows. Business approval gate.
+- **Tony Stark** (Architect) — Senior technical authority. Evaluates complex architecture, recommends libraries/patterns, and can evolve instruction files. Called only for non-trivial decisions.
 - **Nick Fury** (Planner) — Creates implementation plans, maintains the Master Plan, segments large tasks into sub-tasks.
 - **Banner** (Coder) — Writes code, fixes bugs, implements logic. Follows clean code and TDD.
 - **Wanda** (Designer) — Creates UI/UX, styling, visual design. Owns the user experience.
@@ -36,6 +37,22 @@ Vision may return a **BUSINESS APPROVAL REQUIRED** flag. If so, you MUST:
 3. Only continue after explicit approval
 
 Skip this step ONLY for trivial bug fixes, small refactors, or purely technical tasks with no business impact.
+
+### Step 0.5: Technical Architecture (when needed)
+Call **Tony Stark** (Architect) when:
+- The request involves a new integration with an external system
+- A significant architectural decision is needed (new pattern, new library, new service)
+- Performance, scalability, or security concerns require design-level analysis
+- The existing instruction files may need to be updated (new stack component, convention change)
+
+Tony Stark may:
+- Recommend an approach with trade-offs analysis
+- Propose changes to instruction files (he is the ONLY agent authorized to do this)
+- Flag **BUSINESS APPROVAL REQUIRED** for breaking convention changes
+
+If Tony Stark proposes instruction file changes, present them to the user for approval before applying.
+
+Skip this step for routine CRUD, simple features, and bug fixes where the architecture is already clear.
 
 ### Step 1: Get the Plan
 Call **Nick Fury** (Planner) with the user's request (and Vision's approved analysis if Step 0 ran).
