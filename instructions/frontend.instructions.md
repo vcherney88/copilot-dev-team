@@ -1,166 +1,63 @@
 ```instructions
 ---
-applyTo: "**/*.ts,**/*.html,**/*.scss"
+applyTo: "**"
 ---
 
-# Frontend Patterns — Angular
+# Frontend Rules
 
-> Reference templates. Follow this shape for consistency. Don't duplicate rules from `architecture.instructions.md`.
+> Universal frontend principles — technology-agnostic.
+> For technology-specific patterns and code templates, consult the frontend skills.
 
-## Models (mirror backend DTOs)
+## Core Principles
 
-```typescript
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  categoryId: number;
-  createdAt: string;
-}
+- **Smart components** (containers): fetch data, connect to services, pass data down.
+- **Dumb components** (presentational): receive data via props/inputs, emit events upward. No service injection.
+- **Never hardcode API URLs**: use environment configuration.
+- **Async data**: use the framework's reactive/async patterns — never block the UI.
+- **Separation of concerns**: components handle presentation; services handle data access and business logic.
 
-export interface CreateProductRequest {
-  name: string;
-  price: number;
-  categoryId: number;
-}
-```
+## UX Principles
+- Every user action must have visible feedback (loading, success, error).
+- Design for all states: empty, loading, populated, error, disabled.
+- Mobile-first responsive design.
+- Accessibility is mandatory: semantic markup, keyboard navigation, sufficient contrast, screen reader support.
 
-## Service (HttpClient, typed, Observable)
-
-```typescript
-@Injectable({ providedIn: 'root' })
-export class ProductService {
-  private readonly api = `${environment.apiBaseUrl}/api/products`;
-
-  constructor(private http: HttpClient) {}
-
-  getAll(page = 1, pageSize = 20): Observable<Product[]> {
-    return this.http.get<Product[]>(this.api, {
-      params: { page, pageSize }
-    });
-  }
-
-  getById(id: number): Observable<Product> {
-    return this.http.get<Product>(`${this.api}/${id}`);
-  }
-
-  create(req: CreateProductRequest): Observable<Product> {
-    return this.http.post<Product>(this.api, req);
-  }
-
-  update(id: number, req: UpdateProductRequest): Observable<void> {
-    return this.http.put<void>(`${this.api}/${id}`, req);
-  }
-
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.api}/${id}`);
-  }
-}
-```
-- API URL from `environment.ts` — never hardcode.
-- Return `Observable<T>` — never subscribe inside services.
-- Typed generics: `http.get<Product[]>(...)`.
-
-## Components
-
-**Smart (container)** — fetches data, connects to services:
-```typescript
-@Component({ selector: 'app-product-list', templateUrl: './product-list.component.html' })
-export class ProductListComponent implements OnInit {
-  products$ = EMPTY as Observable<Product[]>;
-
-  constructor(private productService: ProductService) {}
-  ngOnInit() { this.products$ = this.productService.getAll(); }
-}
-```
-
-**Dumb (presentational)** — `@Input()` / `@Output()` only, no service injection:
-```typescript
-@Component({ selector: 'app-product-card', templateUrl: './product-card.component.html' })
-export class ProductCardComponent {
-  @Input() product!: Product;
-  @Output() deleted = new EventEmitter<number>();
-}
-```
-
-## Templates
-
-- `async` pipe over manual subscriptions: `*ngFor="let p of products$ | async"`
-- `trackBy` on every `*ngFor`
-- Check Angular version: `@if`/`@for` (17+) vs `*ngIf`/`*ngFor`
-- Semantic HTML: `<article>`, `<section>`, `<nav>`, `<main>`
-- Accessibility: `aria-label`, `<label for="">`, keyboard navigable
-
-## Reactive Forms
-
-```typescript
-this.form = this.fb.group({
-  name: ['', [Validators.required, Validators.maxLength(200)]],
-  price: [null, [Validators.required, Validators.min(0.01)]],
-});
-```
-- Validation errors inline, next to field.
-- Disable submit when form invalid.
-- Feedback after submission (success/error toast or message).
+## Form Rules
+- Client-side validation with inline error messages, next to the field.
+- Disable submit while form is invalid or submitting.
+- Show success/error feedback after submission.
 
 ## Routing
+- Lazy load feature modules/pages — don't load everything upfront.
+- Protect routes with guards for authenticated/authorized sections.
+- RESTful URL patterns: `/resource`, `/resource/new`, `/resource/:id`, `/resource/:id/edit`.
 
-```typescript
-const routes: Routes = [
-  { path: '', component: ProductListComponent },
-  { path: 'new', component: ProductFormComponent },
-  { path: ':id', component: ProductDetailComponent },
-  { path: ':id/edit', component: ProductFormComponent },
-];
-```
-- Lazy load features: `loadChildren: () => import(...)`.
-- Route guards (`CanActivate`) for protected routes.
+## Error Handling
+- Handle HTTP errors centrally (interceptor/middleware), not per-service call.
+- Show user-friendly messages — never expose technical error details.
+- 401 → redirect to login, 403 → forbidden page, 500 → generic error.
 
-## Environment
+## Component Quality Checklist
+- [ ] All interactive states handled (hover, focus, active, disabled)
+- [ ] Error states with actionable messages
+- [ ] Empty states with helpful guidance
+- [ ] Loading states with appropriate indicators
+- [ ] Responsive across breakpoints
+- [ ] Keyboard navigable
+- [ ] Accessible labels and structure (WCAG AA)
 
-```typescript
-export const environment = {
-  production: false,
-  apiBaseUrl: 'http://localhost:5000',
-};
-```
+## Skills to Consult
 
-## Error Interceptor
+Before implementing, always consult the relevant skills for this project:
 
-```typescript
-@Injectable()
-export class ErrorInterceptor implements HttpInterceptor {
-  intercept(req: HttpRequest<unknown>, next: HttpHandler) {
-    return next.handle(req).pipe(
-      catchError((err: HttpErrorResponse) => {
-        // 401 → redirect login, 403 → forbidden, 500 → generic message
-        return throwError(() => err);
-      })
-    );
-  }
-}
-```
-
-## Tests
-
-```typescript
-describe('ProductService', () => {
-  let service: ProductService;
-  let httpMock: HttpTestingController;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
-    service = TestBed.inject(ProductService);
-    httpMock = TestBed.inject(HttpTestingController);
-  });
-
-  it('should fetch all products', () => {
-    service.getAll().subscribe(p => expect(p.length).toBe(2));
-    httpMock.expectOne(/products/).flush([{ id: 1 }, { id: 2 }]);
-  });
-});
-```
-- Mock HttpClient via `HttpClientTestingModule`.
-- Mock services in component tests via `TestBed.overrideProvider`.
+| Task | Skill to use |
+|---|---|
+| Writing components (smart and dumb) | `frontend-patterns` |
+| Writing HTTP services | `frontend-patterns` |
+| Routing configuration | `frontend-patterns` |
+| Forms and validation | `frontend-patterns` |
+| HTTP interceptors | `frontend-patterns` |
+| Component and service tests | `testing-patterns` |
+| Framework setup, environment config | `frontend-stack` |
 
 ```

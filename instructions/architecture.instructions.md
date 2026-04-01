@@ -5,101 +5,72 @@ applyTo: "**"
 
 # Project Architecture
 
-> **Customize this file per project.** Stack, layers, naming, cross-cutting concerns.
+> This is the project identity card. It defines structure and rules — NOT technology details.
+> Technology-specific stack, patterns, and code templates are in `skills/`.
+> To adapt this team to a new project, replace the skills — this file stays mostly the same.
 
 ## Stack
 
-- **Backend**: .NET Core 10
-- **Database**: PostgreSQL
-- **Frontend**: Angular
-- **ORM**: Entity Framework Core (Npgsql)
+> See `skills/stack.skill.md` for the full technology list, versions, and configuration.
+
+- **Backend stack**: defined in `backend-*` skills
+- **Frontend stack**: defined in `frontend-*` skills
+- **Database & ORM**: defined in `backend-stack.skill.md`
 
 ## Layer Structure
 
 ```
-API Layer       → Controllers, DTOs, Validation, Swagger
-Business Layer  → Services (interface + implementation), domain logic
-Data Layer      → Entities, DbContext, Configurations, Repositories, Migrations
+Presentation Layer  → Handles requests/responses, input validation, API contracts
+Business Layer      → All domain logic, business rules, orchestration
+Data Layer          → Persistence, queries, migrations, ORM configuration
 ```
 
-**Dependency flow:** Frontend → API → Business → Data → DB. Never skip layers, never reference upward.
+**Dependency flow:** Presentation → Business → Data → Storage. Never skip layers, never reference upward.
 
 ## Folder Structure
 
-### Backend
+> Exact folder paths are defined in `skills/backend-stack.skill.md` and `skills/frontend-stack.skill.md`.
+
+The general layout follows this pattern:
 ```
 src/
-  Api/Controllers/, DTOs/, Validators/
-  Business/Services/, Exceptions/
-  Data/Entities/, Configurations/, Repositories/, Migrations/, AppDbContext.cs
-  Program.cs
+  [presentation-layer]/   ← framework-specific: controllers, pages, routes, DTOs
+  [business-layer]/       ← services, use cases, domain logic, exceptions
+  [data-layer]/           ← entities/models, repositories, migrations, ORM config
 ```
 
-### Frontend (Angular)
-```
-src/app/
-  core/services/, interceptors/, guards/
-  shared/components/, pipes/, directives/
-  features/{feature}/components/, services/, models/, {feature}.module.ts
-```
+## Key Architectural Patterns
 
-## Repository Pattern
-
-- **Generic** `IRepository<T>` / `Repository<T>` for standard CRUD (`GetByIdAsync`, `GetAllAsync`, `AddAsync`, `UpdateAsync`, `DeleteAsync`).
-- **Specific** `IXxxRepository : IRepository<Xxx>` ONLY when custom queries are needed (joins, aggregations, raw SQL).
-- Don't create empty specific repositories for simple CRUD.
-- Use `IUnitOfWork` (if present) for multi-repository transactions.
-
-## API Conventions
-
-- Routes: plural nouns `/api/products`, `/api/orders`
-- Methods: GET (read), POST (create), PUT (full update), PATCH (partial), DELETE
-- Status codes: 200, 201, 204, 400, 404, 409
-- Pagination: `?page=1&pageSize=20`
-- Always return DTOs, never entities
+- **Thin presentation layer**: input validation, call service, return response. No business logic.
+- **Service layer owns all business logic**: one service per domain aggregate.
+- **Repository/data-access abstraction**: presentation never talks to persistence directly.
+- **Transfer objects**: domain models never exposed outside the business layer.
+- **Dependency inversion**: depend on abstractions (interfaces), not implementations.
 
 ## Naming Conventions
 
-| Scope | Convention | Example |
-|---|---|---|
-| C# public members | PascalCase | `GetProductById` |
-| C# private fields | _camelCase | `_productService` |
-| C# interfaces | I prefix | `IProductService` |
-| C# async methods | Async suffix | `GetByIdAsync` |
-| TS variables/methods | camelCase | `getProducts()` |
-| TS classes/interfaces | PascalCase | `ProductService` |
-| Angular files | kebab-case | `product-list.component.ts` |
-| DB tables | snake_case plural | `products`, `order_items` |
-| DB columns | snake_case | `created_at`, `category_id` |
-| DTOs | Suffix by use | `ProductDto`, `CreateProductRequest`, `UpdateProductRequest` |
-| Test methods (C#) | Method_Scenario_Result | `GetByIdAsync_NotFound_Throws` |
-| Test methods (TS) | should...when... | `should return products when API succeeds` |
+> Technology-specific casing rules (PascalCase, camelCase, snake_case per language) are in `skills/`.
+
+| Concept | Convention |
+|---|---|
+| Collection endpoints | Plural nouns (`/products`, `/orders`) |
+| Boolean variables | `is`, `has`, `can`, `should` prefix |
+| Methods | Verbs (`getUser`, `calculateTotal`, `processOrder`) |
+| Classes/Types | Nouns (`ProductService`, `OrderRepository`) |
+| Request models | `Create[X]Request`, `Update[X]Request` |
+| Response models | `[X]Dto`, `[X]Response`, `[X]Summary` |
+| Test methods | Describe behavior: `[method]_[scenario]_[result]` or `should [behavior] when [condition]` |
 
 ## Cross-Cutting Concerns
 
-### Logging
-- **Serilog** → PostgreSQL (no file logging)
-- Separate connection string for log DB
-- Create `.sql` script for log table (`IF NOT EXISTS`)
-- Structured: `_logger.LogInformation("Processing {OrderId}", orderId)`
+> Implementation details (library names, config syntax) are in `skills/backend-stack.skill.md`.
 
-### Caching
-- `IMemoryCache` for semi-static data (categories, lookups). TTL 5-30 min.
-- Invalidate on writes. Never cache user-specific or frequently changing data.
+- **Logging**: structured logging at service boundaries. Include entity IDs and operation context. Never log secrets.
+- **Caching**: cache semi-static/lookup data. Invalidate on write. Never cache user-specific or volatile data.
+- **Error Handling**: domain exceptions mapped to HTTP status codes via centralized handler. Never expose stack traces.
+- **Authentication/Authorization**: access control enforced at presentation layer entry points.
+- **Data Seeding**: schema via migrations only. Reference data via idempotent seed scripts.
 
-### Error Handling
-- Global exception middleware maps exceptions → HTTP status codes
-- Typed exceptions: `NotFoundException` → 404, `BusinessException` → 400/409
-- Never expose stack traces in production. Always log full exception server-side.
-
-### Authentication
-- `[Authorize]` at controller/action level. `[AllowAnonymous]` for public.
-- Role-based: `[Authorize(Roles = "Admin")]`
-- Strategy per project (JWT, Cookie, OAuth).
-
-### Data Seeding
-- Schema: ORM migrations only.
-- Data: `.sql` seed scripts (idempotent, safe to re-run).
-- Never mix migrations with data seeding.
+> 📖 For technology-specific implementation: consult `skills/backend-stack.skill.md`, `skills/frontend-stack.skill.md`, `skills/backend-patterns.skill.md`, `skills/frontend-patterns.skill.md`.
 
 ```

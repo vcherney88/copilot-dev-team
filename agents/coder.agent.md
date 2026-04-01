@@ -12,14 +12,15 @@ ALWAYS use #context7 MCP Server to read relevant documentation. Do this every ti
 
 ## Before Writing Any Code
 
-Read ALL `instructions/*.instructions.md` files to understand:
-- Project architecture and layer structure
-- Backend conventions and patterns
-- Frontend conventions and patterns
-- Cross-cutting concerns (logging, caching, error handling)
-- Coding standards
+The project's architecture and conventions are automatically provided via instruction files. Before implementing, also consult the relevant **skills** for code templates:
+- **`backend-stack`** — Framework version, DI setup, logging config, naming conventions, folder structure
+- **`frontend-stack`** — Framework version, environment config, naming conventions, folder structure
+- **`backend-patterns`** — Controller, Service, Entity, Repository, ORM config templates
+- **`frontend-patterns`** — Component, Service, Routing, Forms, Interceptor templates
+- **`testing-patterns`** — Unit test, integration test, mocking templates
+- **`api-design`** — REST conventions, status codes, DTOs
 
-Adapt your implementation to whatever stack and patterns are defined in those files. Do NOT assume any specific technology — let the instructions guide you.
+Adapt your implementation to whatever stack and patterns are defined in the instructions and skills. Do NOT assume any specific technology — let them guide you.
 
 ## Mandatory Coding Principles
 

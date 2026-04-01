@@ -1,323 +1,346 @@
-# Reverse Engineering Prompt — Setup Instructions for Existing Projects
+# Setup Guide — Integrating the Squad into an Existing Project
 
-> **Purpose**: Analyze an existing codebase to generate the 4 `instructions/*.instructions.md` files needed by the Squad.
+## New Project (no existing code)
 
-Use this prompt when integrating the Squad into a project that already has code, architecture, and conventions defined. The goal is to extract those conventions and generate the instruction files automatically.
+1. Copy `agents/`, `instructions/`, `skills/` into the project root
+2. Open the project in VS Code
+3. Run the **Reverse Engineering Prompt** below — it will generate the project-specific skill files
+4. Place the generated files into `skills/`
+5. Done — the Squad is ready
 
 ---
 
-## Prompt to Use
+## Existing Project — Reverse Engineering Prompt
 
-Copy and paste this prompt to an AI agent (or use it yourself for manual analysis):
+> **How to use:**
+> 1. Open Copilot Chat (or any AI agent) in the context of your existing project
+> 2. Copy and paste the entire prompt block below
+> 3. The AI will analyze the codebase and generate the 6 skill files
+> 4. Copy the generated files into the `skills/` folder of your project
+
+---
 
 ```
-You are a Senior Software Architect performing reverse engineering on an existing codebase to generate coding instructions for an AI coding squad.
+You are a Senior Software Architect performing a reverse engineering analysis on this codebase.
 
-# Goal
-Analyze the codebase and produce 4 instruction files:
-1. `instructions/architecture.instructions.md` — stack, layers, folder structure, naming, cross-cutting
-2. `instructions/backend.instructions.md` — backend code patterns and templates
-3. `instructions/frontend.instructions.md` — frontend code patterns and templates
-4. `instructions/standards.instructions.md` — generic (copy as-is from the Squad template, no changes needed)
+Your goal is to generate 6 skill files that the AI coding squad will use as on-demand references.
+Analyze the ACTUAL code — never invent or assume patterns. Everything must be derived from what exists.
 
-# Analysis Steps
+---
 
-## 1. Stack Detection
+## STEP 1 — Detect the stack
+
+Read the following files to identify technologies:
+- *.csproj → .NET version (<TargetFramework>)
+- package.json → Node.js / frontend framework (check "dependencies" and "devDependencies")
+- pom.xml or build.gradle → Java / Spring Boot
+- requirements.txt or pyproject.toml → Python
+- go.mod → Go
+- angular.json → confirms Angular
+- vite.config.* or next.config.* → React / Vue / Next.js
+- pubspec.yaml → Flutter
+- appsettings.json or .env or docker-compose.yml → database type and connection strings
+
+Extract: backend language + framework + version, frontend framework + version, database, ORM, test libraries.
+
+---
+
+## STEP 2 — Map the folder structure
+
+List the directory tree (first 4 levels, excluding node_modules, bin, obj, .git).
+Identify which folders belong to each architectural layer:
+- Presentation layer: Controllers, Endpoints, Pages, Routes, Routers
+- Business layer: Services, UseCases, Handlers, Commands, Application
+- Data layer: Repositories, Infrastructure, Persistence, Data, Migrations
+- Domain: Entities, Models, Aggregates, Domain
+- Frontend features: features/, pages/, screens/, views/, modules/
+- Frontend shared: shared/, core/, components/, common/
+
+Record the actual folder paths.
+
+---
+
+## STEP 3 — Extract naming conventions
+
+Sample 15–20 real source files across all layers (not tests, not generated files).
+For each, read it and extract:
+- Class/type naming casing
+- Method naming casing
+- Private field naming (prefix? underscore?)
+- File naming pattern (kebab-case, PascalCase, snake_case?)
+- Interface naming (I prefix or not?)
+- Async method convention (Async suffix or not?)
+- DB table and column naming (check ORM config or migration files)
+- DTO/model naming suffix pattern (Dto, Request, Response, ViewModel, Model?)
+- Test method naming (read one test file)
+
+---
+
+## STEP 4 — Extract architectural patterns
 
 Search the codebase for:
-- **Backend framework**: Check `*.csproj`, `package.json`, `pom.xml`, `requirements.txt`, `Gemfile`, `go.mod`
-  - Look for: .NET (Core/Framework version), Node.js (Express, Nest), Java (Spring Boot), Python (Django, FastAPI), Ruby (Rails), Go, PHP (Laravel)
-- **Frontend framework**: Check `package.json`, `angular.json`, `vite.config`, `next.config`, `pubspec.yaml`
-  - Look for: Angular, React, Vue, Svelte, Blazor, Razor Pages, Flutter
-- **Database**: Check connection strings in `appsettings.json`, `.env`, config files
-  - Look for: PostgreSQL, SQL Server, MySQL, MongoDB, SQLite, Oracle
-- **ORM/Data access**: Check dependencies
-  - Look for: Entity Framework (Core), Dapper, Hibernate, Sequelize, TypeORM, Prisma, Django ORM
-
-**Output**: Fill the "Stack" section of `architecture.instructions.md`.
+- Repository pattern: IRepository, Repository<T>, GenericRepository, BaseRepository
+- Unit of Work: IUnitOfWork, UnitOfWork
+- DI registration: AddScoped/AddTransient/AddSingleton (C#), @Injectable/@Bean, providedIn
+- Transfer objects: files named *Dto*, *Request*, *Response*, *ViewModel*
+- Custom exceptions: files named *Exception*, *Error*
+- Read the app entry point (Program.cs, Startup.cs, main.ts, app.module.ts, main.py) for wiring
 
 ---
 
-## 2. Layer & Folder Structure
+## STEP 5 — Extract cross-cutting concerns
 
-Analyze the folder hierarchy:
-- How many layers? (2-tier, 3-tier, N-tier, Clean Architecture, Hexagonal, etc.)
-- What are the layer names? (Api/Controllers, Business/Services/Application, Data/Infrastructure/Persistence, Domain)
-- Where do these live? (separate projects, folders within one project, modules)
-
-Look for:
-- Controller/Endpoint files → API Layer
-- Service/UseCase files → Business Layer
-- Repository/DbContext files → Data Layer
-- Entity/Model files → Domain or Data
-
-**Output**: Fill "Layer Structure" and "Folder Structure" sections of `architecture.instructions.md`.
+Search and read actual implementations of:
+- Logging library (Serilog, NLog, Winston, ILogger, logback, etc.) — find actual log calls
+- Caching (IMemoryCache, Redis, MemoryCache) — find actual cache usage in services
+- Auth (attributes/decorators/middleware: [Authorize], @UseGuards, @Secured, JWT setup)
+- Global error handler (middleware, exception filter, ControllerAdvice)
+- Validation library (FluentValidation, DataAnnotations, class-validator, Zod, Yup)
 
 ---
 
-## 3. Dependency Flow & Patterns
+## STEP 6 — Extract backend code templates
 
-Identify architectural patterns:
-- **Repository Pattern**: Search for `IRepository`, `Repository<T>`, `GenericRepository`
-  - Is there a generic repository? What methods does it have?
-  - Are there specific repositories for complex queries?
-- **Unit of Work**: Search for `IUnitOfWork`, `UnitOfWork`
-- **Service Pattern**: How are services structured? Interface + implementation? Naming convention?
-- **DTOs**: Separate request/response objects? Naming suffix (Dto, Request, Response, ViewModel)?
-- **Dependency Injection**: Where is DI configured? (Program.cs, Startup.cs, main.ts, AppModule)
+Find the cleanest, most complete real example of each:
+1. A typical controller/endpoint handler (with GET + POST at minimum)
+2. A service — interface + implementation
+3. A domain entity/model with relationships
+4. ORM configuration (Fluent API, entity decorators, mapping config)
+5. A generic repository and one specific repository (if exists)
+6. The DI registration block from the entry point
+7. Custom exception classes
 
-**Output**: Fill "Repository Pattern", "Dependency Flow" sections of `architecture.instructions.md`.
-
----
-
-## 4. Naming Conventions
-
-Sample 10-20 files across layers and extract naming patterns:
-
-### Backend (if .NET/C#/Java)
-- Public members: PascalCase or camelCase?
-- Private fields: `_camelCase`, `camelCase`, `m_camelCase`?
-- Interfaces: `I` prefix (IProductService) or not?
-- Async methods: `Async` suffix or not?
-- Test methods: `MethodName_Scenario_Result` or `should...when...` or `Test_MethodName`?
-
-### Frontend (if TypeScript/JavaScript)
-- Variables/methods: camelCase or snake_case?
-- Classes/interfaces: PascalCase?
-- File names: kebab-case, camelCase, PascalCase?
-- Component naming: `.component.ts`, `.tsx`, `.vue`?
-
-### Database
-- Table names: snake_case, PascalCase, plural or singular?
-- Column names: snake_case, camelCase, PascalCase?
-- Foreign keys: `CategoryId`, `category_id`, `categoryID`?
-
-### DTOs/Models
-- Response models: `ProductDto`, `ProductResponse`, `ProductViewModel`?
-- Request models: `CreateProductRequest`, `ProductCreateDto`, `CreateProduct`?
-
-**Output**: Fill "Naming Conventions" table in `architecture.instructions.md`.
+Strip business-specific names — rename entities to Product/Order as generic examples.
 
 ---
 
-## 5. API Conventions
+## STEP 7 — Extract frontend code templates
 
-If the project has a REST API:
-- Route patterns: `/api/products`, `/products`, `/v1/products`?
-- HTTP methods: RESTful (GET/POST/PUT/DELETE) or custom?
-- Status codes: What's returned for success/error? (200, 201, 204, 400, 404, 409, 500)
-- Pagination: Query params (`?page=1&pageSize=20`), headers, or custom?
-- Versioning: URL versioning (`/v1/`), header (`api-version`), or none?
+Find the cleanest real example of each:
+1. A smart (container) component that fetches data and uses a service
+2. A dumb (presentational) component with only inputs/props
+3. An HTTP service that calls the backend
+4. A model/interface definition (DTO)
+5. Routing configuration (with lazy loading if present)
+6. A reactive/controlled form with validation
+7. An HTTP interceptor (error handling or auth header)
 
-**Output**: Fill "API Conventions" section in `architecture.instructions.md`.
-
----
-
-## 6. Cross-Cutting Concerns
-
-### Logging
-- **Library**: Search imports/dependencies for Serilog, NLog, log4net, Winston, Bunyan, Logback
-- **Sink**: Files, database, console, cloud (Application Insights, CloudWatch)?
-- **Format**: Structured logging with templates `{PropertyName}` or string interpolation?
-- Look at existing log calls to extract the pattern
-
-### Caching
-- **Strategy**: In-memory (`IMemoryCache`, `MemoryCache`), Redis, Memcached?
-- **Where used**: Check service methods for caching logic
-- **TTL**: Are there expiration policies defined?
-
-### Error Handling
-- **Global exception handling**: Middleware in `Program.cs`/`Startup.cs`, filter in `@ControllerAdvice`, error boundary in React?
-- **Custom exceptions**: Search for `*Exception.cs`, `*Error.ts` files
-  - What base class? (`Exception`, `ApplicationException`, custom base?)
-  - What exceptions exist? (`NotFoundException`, `ValidationException`, `BusinessException`)
-- **HTTP mapping**: How are exceptions mapped to status codes?
-
-### Authentication & Authorization
-- **Strategy**: JWT Bearer, Cookie, OAuth, Identity, Auth0, Keycloak?
-- **Attributes/Decorators**: `[Authorize]`, `@Secured`, `@UseGuards`, middleware?
-- **Roles or Policies**: Role-based (`[Authorize(Roles = "Admin")]`) or policy-based?
-
-### Data Seeding
-- **Migrations**: EF Core migrations, Flyway, Liquibase, Alembic, Django migrations?
-- **Seed Data**: SQL scripts, code-based seeding (`HasData`), separate seeder classes?
-
-**Output**: Fill "Cross-Cutting Concerns" section in `architecture.instructions.md`.
+Strip business-specific names — use Product as generic example.
 
 ---
 
-## 7. Backend Code Patterns (for `backend.instructions.md`)
+## STEP 8 — Extract testing patterns
 
-Find 2-3 representative examples of each:
+Find real test file examples of:
+1. A backend unit test (service tested in isolation with mocking)
+2. A backend integration test (full HTTP request to endpoint)
+3. A frontend component test
+4. A frontend service/HTTP test
 
-### Controller
-- Locate a typical controller (e.g., ProductsController, UsersController)
-- Extract the pattern:
-  - Base class (ControllerBase, Controller, ApiController)?
-  - Route attribute pattern?
-  - DI injection (constructor, property)?
-  - Return types (IActionResult, ActionResult<T>, Task<IActionResult>)?
-  - Attributes (`[HttpGet]`, `[ProducesResponseType]`, `[Authorize]`)?
-
-### Service
-- Locate a service interface and implementation
-- Extract:
-  - Naming convention (IProductService / ProductService)?
-  - Method signatures (async/await, return types)?
-  - Dependencies injected?
-  - Logging pattern?
-
-### Entity
-- Locate an entity/model class
-- Extract:
-  - Plain POCO or attributes (`[Key]`, `[Required]`)?
-  - Navigation properties?
-  - Constructor pattern (parameterless, with params)?
-
-### Entity Configuration (if EF Core)
-- Locate `IEntityTypeConfiguration<T>` classes
-- Extract:
-  - Table/column naming (`.ToTable("products")`, `.HasColumnName("created_at")`)?
-  - Indexes, relationships, constraints?
-
-### Repository (if exists)
-- Generic repository interface/implementation
-- Specific repository example
-
-### DI Registration
-- Where is DI configured? Extract the pattern for registering DbContext, repositories, services
-
-### Testing
-- Locate unit test files (xUnit, NUnit, MSTest, Jest, Mocha)
-- Extract:
-  - Test class naming (`*Tests`, `*Test`, `*.spec.ts`)?
-  - Test method naming?
-  - Mocking library (Moq, NSubstitute, Sinon, Jest)?
-  - Setup/teardown pattern?
-
-**Output**: Create `backend.instructions.md` with concise code templates extracted from the codebase.
+Record: test framework, mocking library, setup pattern, assertion style.
 
 ---
 
-## 8. Frontend Code Patterns (for `frontend.instructions.md`)
+## OUTPUT — Generate these 6 files
 
-Find 2-3 representative examples of each:
+### FILE 1: `backend-stack.skill.md`
 
-### Component
-- Smart/container component example
-- Dumb/presentational component example
-- Extract: file naming, folder structure, lifecycle hooks, state management
-
-### Service
-- HTTP service example (calling backend API)
-- Extract: HttpClient/fetch/axios usage, Observable/Promise, error handling, base URL handling
-
-### Model/Interface
-- DTO/model interface
-- Extract: naming (`.model.ts`, `.interface.ts`, `.types.ts`)?
-
-### Routing
-- Routing configuration
-- Extract: lazy loading, route guards, param handling
-
-### Forms
-- Reactive form example or template-driven form
-- Extract: validation pattern, error display
-
-### State Management (if applicable)
-- Redux/NgRx/Vuex/Context API/Riverpod pattern
-
-### Testing
-- Component test example
-- Service test example
-- Extract: mocking pattern, test utilities (TestBed, render, etc.)
-
-**Output**: Create `frontend.instructions.md` with concise code templates extracted from the codebase.
-
+```skill
+---
+name: Backend Stack
+description: Technology-specific stack details for the backend. Consult this skill for framework version, DI setup, logging config, naming conventions per language, folder structure, and migration commands.
 ---
 
-## 9. Generate the Files
+# Backend Stack — [detected framework + version]
 
-Using the extracted information, generate the 4 instruction files:
-
-### `architecture.instructions.md`
-```markdown
-## Stack
-[fill from step 1]
-
-## Layer Structure
-[fill from step 2]
+## Technology Stack
+| Component | Technology | Version |
+[fill from Step 1]
 
 ## Folder Structure
-[fill from step 2]
-
-## Repository Pattern
-[fill from step 3]
-
-## Dependency Flow
-[fill from step 3]
-
-## API Conventions
-[fill from step 5]
+[fill from Step 2 — actual paths]
 
 ## Naming Conventions
-[fill from step 4 — use table format]
+| Scope | Convention | Example |
+[fill from Step 3 — real examples from code]
 
-## Cross-Cutting Concerns
-[fill from step 6]
-```
+## DI Registration Pattern
+[fill from Step 5 — actual registration code from entry point]
 
-### `backend.instructions.md`
-Use the template structure, replace examples with real code from the codebase (step 7).
+## Logging Pattern
+[fill from Step 5 — actual log call examples]
 
-### `frontend.instructions.md`
-Use the template structure, replace examples with real code from the codebase (step 8).
+## Caching Pattern
+[fill from Step 5 — actual cache usage]
 
-### `standards.instructions.md`
-Copy as-is from the Squad template — this file is generic and doesn't change per project.
+## Error Handling Pattern
+[fill from Step 5 — exception classes + global handler]
 
----
+## Authentication Pattern
+[fill from Step 5 — actual auth setup]
 
-## Validation Checklist
-
-After generating the files, verify:
-- [ ] All 4 files created
-- [ ] Stack technologies correctly identified
-- [ ] Folder paths match actual project structure
-- [ ] Naming conventions extracted from at least 10 real examples
-- [ ] Code templates are real snippets from the codebase (not invented)
-- [ ] Cross-cutting concerns (logging, caching, auth) patterns identified
-- [ ] No hardcoded assumptions — everything derived from the codebase
+## Migration Commands
+[fill from Step 5 — actual commands used]
 ```
 
 ---
 
-## How to Use This Prompt
+### FILE 2: `frontend-stack.skill.md`
 
-### Option 1: AI Agent (Recommended)
-1. Copy the entire prompt above
-2. Paste it to an AI agent with codebase access (e.g., Copilot Chat, Claude with MCP, Cursor)
-3. Point it to the project root folder
-4. Review and validate the generated files
+```skill
+---
+name: Frontend Stack
+description: Technology-specific stack details for the frontend. Consult this skill for framework version, environment configuration, naming conventions, template syntax, and styling approach.
+---
 
-### Option 2: Manual Analysis
-1. Follow the analysis steps manually
-2. Use find/grep to search for patterns
-3. Sample multiple files to confirm conventions
-4. Fill the instruction files yourself
+# Frontend Stack — [detected framework + version]
 
-### Option 3: Hybrid
-1. Use AI to extract raw data (file lists, code samples)
-2. Manually review and refine the patterns
-3. Generate the final instruction files
+## Technology Stack
+[fill from Step 1]
+
+## Folder Structure
+[fill from Step 2 — actual paths]
+
+## Naming Conventions
+[fill from Step 3 — real examples]
+
+## Environment Configuration
+[fill from Step 5 — actual environment file content]
+
+## Module / Bootstrap Setup
+[fill from Step 5 — actual entry point / app module]
+
+## Template Syntax
+[fill from Step 7 — actual template patterns]
+
+## CSS / Styling Approach
+[fill from Step 7 — actual CSS/SCSS/Tailwind approach]
+```
 
 ---
 
-## After Setup
+### FILE 3: `backend-patterns.skill.md`
 
-Once the 4 instruction files are created:
-1. Place them in `instructions/` folder at the project root
-2. Copy the `agents/` folder into the project
-3. Copy `squad-overview.md` to the project root
-4. The Squad is ready to use
-5. Test with a small change request to validate the instructions are accurate
+```skill
+---
+name: Backend Code Patterns
+description: Reference code templates for backend implementation. Consult this skill when writing controllers, services, entities, repositories, DTOs, or DI registration.
+---
+
+# Backend Code Patterns — [framework name]
+
+[Write a section for each of the 7 items from Step 6.
+Use real code extracted from the codebase with business names replaced by Product/Order.
+Add a one-line comment above each template explaining when to use it.]
+```
+
+---
+
+### FILE 4: `frontend-patterns.skill.md`
+
+```skill
+---
+name: Frontend Code Patterns
+description: Reference code templates for frontend implementation. Consult this skill when writing components, services, models, routing, forms, or interceptors.
+---
+
+# Frontend Code Patterns — [framework name]
+
+[Write a section for each of the 7 items from Step 7.
+Use real code extracted from the codebase with business names replaced by Product.
+Add a one-line comment above each template explaining when to use it.]
+```
+
+---
+
+### FILE 5: `testing-patterns.skill.md`
+
+```skill
+---
+name: Testing Patterns
+description: Reference templates for unit tests, integration tests, and mocking. Consult this skill when writing or reviewing tests.
+---
+
+# Testing Patterns — [test framework names]
+
+[Write a section for each of the 4 items from Step 8.
+Use real code structure with business names replaced by Product.
+Show setup, arrange, act, assert clearly.]
+```
+
+---
+
+### FILE 6: `api-design.skill.md`
+
+```skill
+---
+name: API Design Patterns
+description: Reference for REST API conventions, status codes, pagination, DTOs, and error responses used in this project.
+---
+
+# API Design Patterns
+
+## Route Patterns
+[extract from actual controllers/endpoints in the codebase]
+
+## HTTP Methods and Status Codes
+[extract what status codes are actually returned, with examples]
+
+## Pagination
+[extract actual pagination implementation if present]
+
+## DTO Naming Convention
+[extract from actual DTO files]
+
+## Error Response Shape
+[extract from actual error handler / response examples]
+```
+
+---
+
+## VALIDATION
+
+After generating all 6 files, verify:
+- All code templates are extracted from REAL files, not invented
+- No placeholder text remains (no "[fill from...]" left unfilled)
+- Each skill file has at least 50 lines of content
+- Business-specific names have been replaced with generic Product/Order examples
+
+## IMPORTANT
+Do NOT generate or modify:
+- agents/ files
+- instructions/ files
+- Any file outside the 6 skill files listed above
+
+These files are generic and must never be modified during reverse engineering.
+```
+
+---
+
+## After generating the skills
+
+1. Place the 6 generated files into `skills/` in your project
+2. The Squad will automatically use them as on-demand references
+3. No changes needed to `agents/` or `instructions/`
+
+---
+
+## File structure after setup
+
+```
+your-project/
+  agents/                          ← copy from copilot-dev-team (GENERIC, never modify)
+  instructions/                    ← copy from copilot-dev-team (GENERIC, never modify)
+  skills/
+    backend-stack.skill.md         ← GENERATED for your project
+    frontend-stack.skill.md        ← GENERATED for your project
+    backend-patterns.skill.md      ← GENERATED for your project
+    frontend-patterns.skill.md     ← GENERATED for your project
+    testing-patterns.skill.md      ← GENERATED for your project
+    api-design.skill.md            ← GENERATED for your project
+```
+
+## To regenerate skills after a major change
+
+Re-run the prompt above on the updated codebase and replace the skill files.
+Never regenerate `agents/` or `instructions/` — those never change.

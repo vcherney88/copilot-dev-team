@@ -72,7 +72,7 @@ Red-Green-Refactor cycle for every change:
 |---|---|
 | **Pepper** | Orchestrator — coordinates, delegates, never codes |
 | **Vision** | Analyst — validates requirements, detects conflicts, business gate |
-| **Tony Stark** | Architect — evaluates complex tech decisions, proposes architecture, evolves instructions |
+| **Tony Stark** | Architect — evaluates complex tech decisions, proposes architecture, evolves instructions and skills |
 | **Nick Fury** | Planner — plans implementation, maintains `master-plan.md` |
 | **Banner** | Coder — writes code, TDD, clean code |
 | **Wanda** | Designer — UI/UX, templates, styles |
@@ -85,9 +85,26 @@ Request → Vision (if needed) → [Tony Stark if complex] → Nick Fury → Ban
 ```
 
 - Vision escalates ambiguous/breaking changes → **user must approve** before proceeding.
-- Tony Stark steps in only for architecture decisions, tech choices, or instruction evolution.
+- Tony Stark steps in only for architecture decisions, tech choices, or instruction/skill evolution.
 - Nick Fury segments large tasks: **max 3-5 files per sub-task, one layer at a time**.
 - Nick Fury updates `master-plan.md` with every CR (numbered CR-001, CR-002...).
+
+### Skills (on-demand knowledge)
+
+Skills are detailed reference documents that agents consult when needed. They do NOT consume context until invoked.
+
+**Generic skills** (reusable across projects — never replace these):
+> None currently — all skills are project-specific.
+
+**Project-specific skills** (replace these when switching projects):
+- **backend-stack** — Technology stack details: framework, ORM, DI setup, logging, naming conventions, folder structure
+- **frontend-stack** — Technology stack details: framework, environment config, naming conventions, folder structure
+- **backend-patterns** — Backend code templates: controller, service, entity, repository, ORM config
+- **frontend-patterns** — Frontend code templates: component, service, routing, forms, interceptor
+- **testing-patterns** — Unit test, integration test, and mocking templates
+- **api-design** — REST API conventions, status codes, pagination, DTOs
+
+Agents must consult the relevant skills **before implementing** to ensure technology consistency.
 
 ### Parallelization
 
