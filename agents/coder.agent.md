@@ -2,7 +2,7 @@
 ---
 name: Banner
 description: Coder — writes code following clean code principles, TDD, and project conventions.
-model: GPT-5.3-Codex (copilot)
+model: Claude Sonnet 4,6 (copilot)
 tools: ['vscode', 'execute', 'read', 'agent', 'context7/*', 'github/*', 'edit', 'search', 'web', 'vscode/memory', 'todo']
 ---
 
